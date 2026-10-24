@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soul Storm Tracker | Minecraft Dungeons II</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        sculk: {
+                            950: '#040911',
+                            900: '#081221',
+                            800: '#0d1e36',
+                            700: '#152d4f',
+                        },
+                        soul: {
+                            cyan: '#00f2fe',
+                            teal: '#0891b2',
+                            purple: '#a855f7',
+                            deep: '#6b21a8',
+                            amber: '#f59e0b'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 5s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #040911;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 85% 25%, rgba(168, 85, 247, 0.1) 0%, transparent 45%),
+                radial-gradient(circle at 50% 90%, rgba(0, 242, 254, 0.06) 0%, transparent 50%);
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* Glow effects */
+        .soul-glow-active {
+            box-shadow: 0 0 35px -5px rgba(0, 242, 254, 0.35), inset 0 0 20px -10px rgba(168, 85, 247, 0.4);
+            border-color: rgba(0, 242, 254, 0.5);
+        }
+
+        .soul-glow-cooldown {
+            box-shadow: 0 0 30px -8px rgba(245, 158, 11, 0.25), inset 0 0 15px -10px rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .text-glow-cyan {
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.65), 0 0 40px rgba(0, 242, 254, 0.25);
+        }
+
+        .text-glow-amber {
+            text-shadow: 0 0 20px rgba(245, 158, 11, 0.6), 0 0 40px rgba(245, 158, 11, 0.2);
+        }
+
+        .text-glow-purple {
+            text-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #081221;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f2fe;
+        }
+
+        /* Animated Background Particles Canvas */
+        #soulParticles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between relative selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Floating Soul Particles Canvas -->
+    <canvas id="soulParticles"></canvas>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Header -->
+    <header class="relative z-10 border-b border-slate-800/80 bg-sculk-950/80 backdrop-blur-md sticky top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 via-teal-500 to-purple-600 p-0.5 shadow-lg shadow-cyan-500/20">
+                    <div class="w-full h-full bg-sculk-950 rounded-[10px] flex items-center justify-center">
+                        <i class="fa-solid fa-bolt-lightning text-cyan-400 text-xl animate-pulse"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-cyan-300 via-teal-200 to-purple-400 bg-clip-text text-transparent">
+                            SOUL STORM TRACKER
+                        </h1>
+                        <span class="text-[11px] font-mono uppercase px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-semibold">
+                            MCD II v1.1.1.0
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">Hệ thống đếm ngược Chu kỳ Bão Linh Hồn & Vòng xoay 7 Khu vực</p>
+                </div>
+            </div>
+
+            <!-- Top Controls: Sound & Current Local Clock -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <!-- Local Clock -->
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sculk-900/90 border border-slate-800 text-xs text-slate-300 font-mono">
+                    <i class="fa-regular fa-clock text-cyan-400"></i>
+                    <span id="localClockDisplay">--:--:--</span>
+                </div>
+
+                <!-- Sound Toggle Button -->
+                <button id="soundToggleBtn" onclick="toggleSound()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 bg-sculk-900/90 border-slate-700 text-slate-300 hover:border-cyan-400/50">
+                    <i id="soundIcon" class="fa-solid fa-volume-xmark text-slate-400"></i>
+                    <span id="soundStatusText">Âm báo: TẮT</span>
+                </button>
+
+                <!-- Test Sound Button -->
+                <button onclick="testAudioAlert()" title="Nghe thử âm báo Soul Storm" class="p-2 px-3 rounded-xl bg-purple-950/60 hover:bg-purple-900/70 border border-purple-500/40 text-purple-300 text-xs font-medium transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-music"></i>
+                    <span class="hidden sm:inline">Thử chuông</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+        <!-- HERO SECTION: MAIN TIMER + NEXT/CURRENT REGION -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+            <!-- Left 8 Cols: Primary Countdown Card -->
+            <div id="heroTimerCard" class="lg:col-span-8 rounded-2xl bg-sculk-900/85 backdrop-blur-xl border-2 p-6 sm:p-8 flex flex-col justify-between transition-all duration-500 soul-glow-active relative overflow-hidden">
+                
+                <!-- Decorative Top Corner Glow -->
+                <div id="heroBgDecor" class="w-72 h-72 rounded-full bg-cyan-500/10 blur-3xl absolute -top-20 -right-20 pointer-events-none transition-colors duration-700"></div>
+
+                <!-- Top Status Row -->
+                <div class="flex flex-wrap items-center justify-between gap-3 z-10">
+                    <!-- Dynamic Phase Badge -->
+                    <div id="statusBadge" class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold tracking-wide uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-lg shadow-cyan-500/10">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                        <span id="statusBadgeText">⚡ SOUL STORM ĐANG HOẠT ĐỘNG</span>
+                    </div>
+
+                    <!-- Mode Indicator Badge (Server vs Manual Override) -->
+                    <div class="flex items-center gap-2">
+                        <span id="syncModeBadge" class="text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-satellite-dish text-cyan-400 text-[10px]"></i>
+                            <span>Giờ chuẩn Server (UTC)</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Center Big Timer & Dual Phase Info -->
+                <div class="my-6 sm:my-8 text-center sm:text-left flex flex-col sm:flex-row sm:items-end justify-between gap-6 z-10">
+                    <div>
+                        <p id="timerSubLabel" class="text-xs sm:text-sm uppercase tracking-wider font-semibold text-slate-400 mb-1">
+                            THỜI GIAN CƠN BÃO CÒN LẠI (ACTIVE):
+                        </p>
+                        <div class="flex items-baseline justify-center sm:justify-start gap-3">
+                            <div id="mainCountdown" class="font-mono text-6xl sm:text-7xl md:text-8xl font-extrabold tracking-tight text-cyan-300 text-glow-cyan select-none">
+                                20:00
+                            </div>
+                            <span id="cycleMinuteTag" class="text-xs sm:text-sm font-mono text-slate-400 bg-sculk-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
+                                Phút 00/40
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Counter Box (Always shows next milestone) -->
+                    <div class="bg-sculk-950/80 border border-slate-800/90 rounded-xl p-3.5 sm:min-w-[230px] text-left">
+                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold flex items-center justify-between">
+                            <span id="secondaryTimerLabel">Đợt bão kế tiếp sau:</span>
+                            <i class="fa-solid fa-hourglass-half text-purple-400"></i>
+                        </div>
+                        <div id="secondaryCountdown" class="font-mono text-2xl font-bold text-purple-300 mt-1">
+                            40:00
+                        </div>
+                        <div id="nextPhaseTimeClock" class="text-[11px] text-slate-400 mt-0.5">
+                            Chuyển pha lúc: --:--
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar Section -->
+                <div class="space-y-2 z-10">
+                    <div class="flex justify-between items-center text-xs font-medium">
+                        <span id="progressLeftLabel" class="text-cyan-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-fire-flame-curved"></i> Tiến độ cơn bão hiện tại
+                        </span>
+                        <span id="progressPercentText" class="font-mono text-slate-300">100% còn lại</span>
+                    </div>
+                    <div class="w-full h-3.5 bg-sculk-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                        <div id="mainProgressBar" class="h-full rounded-full bg-gradient-to-r from-cyan-400 via-teal-400 to-purple-500 transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-slate-400 font-mono pt-1">
+                        <span>00:00 (Bắt đầu chu kỳ)</span>
+                        <span>20:00 (Kết thúc bão / Nghỉ)</span>
+                        <span>40:00 (Chu kỳ mới)</span>
+                    </div>
+                </div>
+
+                <!-- Quick Simulation / Sync Bar inside Hero -->
+                <div class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 z-10">
+                    <div class="text-xs text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-cyan-400"></i>
+                        <span>Chế độ bấm giờ / Test nhanh:</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="startManualPhase('ACTIVE')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-bolt"></i> Bão vừa nổ (Đếm 20p Active)
+                        </button>
+                        <button onclick="startManualPhase('COOLDOWN')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-hourglass-start"></i> Bão vừa tắt (Đếm 20p Chờ)
+                        </button>
+                        <button id="resetServerSyncBtn" onclick="resetToServerTime()" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-400/40 transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate"></i> Về giờ chuẩn Server
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right 4 Cols: Current / Target Region Details Card -->
+            <div class="lg:col-span-4 rounded-2xl bg-sculk-900/85 backdrop-blur-xl border border-slate-800 p-6 flex flex-col justify-between relative overflow-hidden">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-4">
+                        <span id="regionCardHeaderTag" class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-location-crosshairs"></i> KHU VỰC ĐANG CÓ BÃO
+                        </span>
+                        <span id="regionRotationIndexBadge" class="text-xs font-mono px-2.5 py-0.5 rounded-md bg-sculk-950 border border-slate-800 text-slate-400">
+                            Vòng xoay #1/7
+                        </span>
+                    </div>
+
+                    <!-- Region Title & Hot Farm Badge -->
+                    <div class="p-4 rounded-xl bg-sculk-950/90 border border-slate-800/90 mb-4">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h2 id="currentRegionName" class="text-2xl font-extrabold text-white tracking-tight">
+                                    Howling Woods
+                                </h2>
+                                <p id="currentRegionVietSub" class="text-xs text-slate-400 mt-0.5">
+                                    Rừng Hú Gió
+                                </p>
+                            </div>
+                            <span id="hotFarmBadge" class="hidden px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 to-red-500/20 border border-amber-400/50 text-amber-300 text-[11px] font-bold uppercase tracking-wider shrink-0">
+                                🔥 Khu Cày Tốt Nhất
+                            </span>
+                        </div>
+
+                        <!-- Region Stats Grid -->
+                        <div class="grid grid-cols-2 gap-2.5 mt-4 pt-3 border-t border-slate-800/80 text-xs">
+                            <div class="bg-sculk-900/80 p-2.5 rounded-lg border border-slate-800/60">
+                                <span class="text-slate-400 block text-[11px]">Storm Generators</span>
+                                <span id="currentRegionGenerators" class="font-mono font-bold text-cyan-300 text-sm mt-0.5 block">
+                                    7 điểm spawn
+                                </span>
+                            </div>
+                            <div class="bg-sculk-900/80 p-2.5 rounded-lg border border-slate-800/60">
+                                <span class="text-slate-400 block text-[11px]">Mục tiêu tối đa</span>
+                                <span class="font-mono font-bold text-purple-300 text-sm mt-0.5 block">
+                                    Phá 3 / 3 trụ
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Train Stations -->
+                        <div class="mt-3 pt-2.5 border-t border-slate-800/60 text-xs">
+                            <span class="text-slate-400 flex items-center gap-1.5 mb-1">
+                                <i class="fa-solid fa-train-subway text-cyan-400"></i> Trạm tàu (Train Station) gần nhất:
+                            </span>
+                            <p id="currentRegionStations" class="font-semibold text-slate-200 bg-sculk-900/90 px-3 py-2 rounded-lg border border-slate-800">
+                                Little Howl Hamlet, Hidden Grove
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Next Region Preview Box -->
+                    <div class="p-3.5 rounded-xl bg-sculk-950/50 border border-slate-800/70 flex items-center justify-between">
+                        <div>
+                            <span class="text-[11px] uppercase tracking-wider text-slate-400 block">Khu vực tiếp theo:</span>
+                            <span id="nextRegionNamePreview" class="font-bold text-sm text-purple-300">Singer's Meadow</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[11px] text-slate-400 block">Số trụ:</span>
+                            <span id="nextRegionGenPreview" class="font-mono text-xs text-slate-300">8 điểm</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Region Offset Adjuster (If server shifts rotation) -->
+                <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                    <span class="text-slate-400" title="Dùng nếu khu vực trong game lệch với lịch chuẩn">
+                        Tinh chỉnh lệch khu vực:
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="adjustRegionOffset(-1)" class="w-7 h-7 rounded-lg bg-sculk-950 hover:bg-slate-800 border border-slate-700 text-slate-200 flex items-center justify-center transition">
+                            <i class="fa-solid fa-minus text-[10px]"></i>
+                        </button>
+                        <span id="regionOffsetDisplay" class="font-mono px-2 text-cyan-300 font-bold">0</span>
+                        <button onclick="adjustRegionOffset(1)" class="w-7 h-7 rounded-lg bg-sculk-950 hover:bg-slate-800 border border-slate-700 text-slate-200 flex items-center justify-center transition">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECOND ROW: IN-RUN TRACKER & ROTATION SCHEDULE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left 5 Cols: In-Run Storm Generator Tracker & Loot Info -->
+            <div class="lg:col-span-5 rounded-2xl bg-sculk-900/85 backdrop-blur-xl border border-slate-800 p-6 flex flex-col justify-between space-y-5">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
+                        <div>
+                            <h3 class="font-bold text-base sm:text-lg text-white flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-purple-400"></i>
+                                Bộ Đếm Hỗ Trợ Trong Trận
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Theo dõi tiến độ phá 3 Storm Generators & cấp Rương</p>
+                        </div>
+                        <button onclick="resetGenerators()" class="px-2.5 py-1 rounded-lg bg-sculk-950 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> Đặt lại
+                        </button>
+                    </div>
+
+                    <!-- 3 Interactive Generator Pillars -->
+                    <div class="mt-4">
+                        <div class="flex justify-between items-center text-xs text-slate-300 mb-2">
+                            <span>Bấm vào các tụ điện bên dưới khi bạn phá hủy:</span>
+                            <span id="genCountBadge" class="font-mono font-bold text-cyan-300">0 / 3 Đã phá</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <!-- Pillar 1 -->
+                            <button onclick="toggleGenerator(1)" id="genBtn1" class="group p-3.5 rounded-xl border border-slate-700/80 bg-sculk-950/90 hover:border-cyan-400/60 transition-all flex flex-col items-center text-center relative overflow-hidden">
+                                <div id="genIcon1" class="w-10 h-10 rounded-full bg-slate-800/90 flex items-center justify-center text-slate-400 group-hover:text-cyan-300 transition mb-2">
+                                    <i class="fa-solid fa-tower-observation text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold text-slate-200">Generator #1</span>
+                                <span class="text-[11px] font-mono text-slate-400 mt-0.5">Rương Lv.1</span>
+                                <span class="text-[10px] font-mono text-cyan-400/80 mt-1">800 HP</span>
+                            </button>
+
+                            <!-- Pillar 2 -->
+                            <button onclick="toggleGenerator(2)" id="genBtn2" class="group p-3.5 rounded-xl border border-slate-700/80 bg-sculk-950/90 hover:border-cyan-400/60 transition-all flex flex-col items-center text-center relative overflow-hidden">
+                                <div id="genIcon2" class="w-10 h-10 rounded-full bg-slate-800/90 flex items-center justify-center text-slate-400 group-hover:text-cyan-300 transition mb-2">
+                                    <i class="fa-solid fa-tower-observation text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold text-slate-200">Generator #2</span>
+                                <span class="text-[11px] font-mono text-slate-400 mt-0.5">Rương Lv.2</span>
+                                <span class="text-[10px] font-mono text-cyan-400/80 mt-1">1,000 HP</span>
+                            </button>
+
+                            <!-- Pillar 3 -->
+                            <button onclick="toggleGenerator(3)" id="genBtn3" class="group p-3.5 rounded-xl border border-slate-700/80 bg-sculk-950/90 hover:border-cyan-400/60 transition-all flex flex-col items-center text-center relative overflow-hidden">
+                                <div id="genIcon3" class="w-10 h-10 rounded-full bg-slate-800/90 flex items-center justify-center text-slate-400 group-hover:text-cyan-300 transition mb-2">
+                                    <i class="fa-solid fa-tower-observation text-lg"></i>
+                                </div>
+                                <span class="text-xs font-bold text-slate-200">Generator #3</span>
+                                <span class="text-[11px] font-mono text-slate-400 mt-0.5">Rương Lv.3</span>
+                                <span class="text-[10px] font-mono text-cyan-400/80 mt-1">1,200 HP</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Reward Status Box -->
+                    <div id="rewardTierBox" class="mt-4 p-4 rounded-xl bg-sculk-950 border border-slate-800 transition-all">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-400">Phần thưởng hiện tại:</span>
+                            <span id="rewardChestTitle" class="text-xs font-bold font-mono text-slate-300">Chưa kích hoạt rương</span>
+                        </div>
+                        <p id="rewardChestDesc" class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                            Hãy phá hủy ít nhất 1 Storm Generator trong khu vực bão trước khi đồng hồ 20 phút kết thúc để triệu hồi Rương Bão (Storm Chest).
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Game Mechanics & Drop Rate Quick Reference -->
+                <div class="pt-3 border-t border-slate-800/80 space-y-2.5 text-xs">
+                    <div class="font-semibold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-gem text-cyan-400"></i> Thông số Loot & Cơ chế chuẩn (v1.1.1.0):
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div class="p-2.5 rounded-lg bg-sculk-950/70 border border-slate-800/80">
+                            <span class="text-slate-400 block text-[11px]">Tỉ lệ rơi đồ Unique</span>
+                            <span class="font-mono font-bold text-amber-300 text-sm">19.8% / vật phẩm</span>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-sculk-950/70 border border-slate-800/80">
+                            <span class="text-slate-400 block text-[11px]">Thuộc tính (Modifiers)</span>
+                            <span class="font-mono font-bold text-purple-300 text-sm">Tối đa 3 dòng</span>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        <i class="fa-solid fa-circle-info text-cyan-400 mr-1"></i>
+                        Mẹo: Rương Cấp 3 (1,200 HP) yêu cầu bạn vừa đánh rương vừa né sét linh hồn. Khu vực <strong>Humbler Huskland</strong> có tới 8-9 điểm spawn trụ gần trạm tàu nhất!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right 7 Cols: Upcoming Schedule Timeline (Next 8 Cycles) -->
+            <div class="lg:col-span-7 rounded-2xl bg-sculk-900/85 backdrop-blur-xl border border-slate-800 p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3.5">
+                        <div>
+                            <h3 class="font-bold text-base sm:text-lg text-white flex items-center gap-2">
+                                <i class="fa-solid fa-calendar-days text-cyan-400"></i>
+                                Lịch Trình Các Đợt Bão Sắp Tới
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Tự động quy đổi theo giờ máy của bạn • Bấm biểu tượng chuông để hẹn nhắc khu vực</p>
+                        </div>
+
+                        <!-- Filter Hot Farm Toggle -->
+                        <button id="filterHotBtn" onclick="toggleHotFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-sculk-950 border border-slate-700 text-slate-300 hover:border-amber-400/50 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-fire text-amber-400"></i>
+                            <span>Chỉ hiện khu Hot Farm</span>
+                        </button>
+                    </div>
+
+                    <!-- Schedule Table / List -->
+                    <div id="scheduleListContainer" class="mt-4 space-y-2.5 max-h-[390px] overflow-y-auto pr-1">
+                        <!-- Dynamically populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Legend / Cycle Rule Note -->
+                <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                    <span><i class="fa-solid fa-server text-purple-400 mr-1"></i> Mốc gốc (Epoch): <code class="text-slate-300 font-mono">2026-01-01 00:00:00 UTC</code></span>
+                    <span>Chu kỳ chuẩn: <strong>20p Bão (Active)</strong> + <strong>20p Nghỉ (Cooldown)</strong> = 40 phút</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- THIRD ROW: ALL 7 REGIONS REFERENCE OVERVIEW -->
+        <div class="rounded-2xl bg-sculk-900/75 backdrop-blur-xl border border-slate-800/90 p-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div>
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                        <i class="fa-solid fa-map-location-dot text-cyan-400"></i>
+                        Bản Đồ Vòng Xoay 7 Khu Vực (Region Rotation Order)
+                    </h3>
+                    <p class="text-xs text-slate-400">Thứ tự xuất hiện bão cố định từ #1 đến #7 rồi lặp lại</p>
+                </div>
+            </div>
+
+            <div id="allRegionsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-slate-800/80 bg-sculk-950/90 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+            <div>
+                Thiết kế cho cộng đồng <strong>Minecraft Dungeons II</strong> • Dữ liệu chuẩn v1.1.1.0
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span> 00p - 20p: Bão Hoạt Động
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span> 20p - 40p: Bão Tạm Nghỉ
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        /**************************************************************
+         * 1. GAME DATA & CONSTANTS (Minecraft Dungeons II v1.1.1.0)
+         **************************************************************/
+        const EPOCH_MS = Date.parse('2026-01-01T00:00:00Z'); // Mốc gốc UTC
+        const CYCLE_DURATION_MS = 40 * 60 * 1000;            // 40 phút = 2,400,000 ms
+        const ACTIVE_DURATION_MS = 20 * 60 * 1000;           // 20 phút đầu Active = 1,200,000 ms
+        const COOLDOWN_DURATION_MS = 20 * 60 * 1000;         // 20 phút sau Cooldown = 1,200,000 ms
+
+        const REGIONS = [
+            {
+                id: 0,
+                name: "Howling Woods",
+                vietName: "Rừng Hú Gió",
+                generators: "7 điểm",
+                stations: "Little Howl Hamlet, Hidden Grove",
+                isHot: false,
+                icon: "fa-tree"
+            },
+            {
+                id: 1,
+                name: "Singer's Meadow",
+                vietName: "Đồng Cỏ Ngân Nga",
+                generators: "8 điểm",
+                stations: "Singer's Portal, Choral Glen",
+                isHot: false,
+                icon: "fa-music"
+            },
+            {
+                id: 2,
+                name: "Rainy Plains",
+                vietName: "Đồng Bằng Mưa Tầm Tã",
+                generators: "8 điểm",
+                stations: "Puddle Pond, Monsoon Banks",
+                isHot: false,
+                icon: "fa-cloud-showers-heavy"
+            },
+            {
+                id: 3,
+                name: "Humbler Huskland",
+                vietName: "Vùng Đất Khô Cằn",
+                generators: "8-9 điểm",
+                stations: "The Echo Den, Ichor Ponds",
+                isHot: true,
+                icon: "fa-skull"
+            },
+            {
+                id: 4,
+                name: "Lullaby Hills",
+                vietName: "Đồi Ru Ngủ",
+                generators: "8 điểm",
+                stations: "Lullaby Border",
+                isHot: false,
+                icon: "fa-moon"
+            },
+            {
+                id: 5,
+                name: "Frozen Highlands",
+                vietName: "Cao Nguyên Băng Giá",
+                generators: "8 điểm",
+                stations: "Trạm Băng Giá Trung Tâm",
+                isHot: false,
+                icon: "fa-snowflake"
+            },
+            {
+                id: 6,
+                name: "Honeycomb Fields",
+                vietName: "Cánh Đồng Tổ Ong",
+                generators: "5 điểm",
+                stations: "Trạm Cánh Đồng Mật",
+                isHot: false,
+                icon: "fa-cubes-stacked"
+            }
+        ];
+
+        /**************************************************************
+         * 2. APPLICATION STATE
+         **************************************************************/
+        let state = {
+            manualOverride: false,       // true nếu người chơi tự bấm nút đếm ngược thủ công
+            manualStartTimeMs: 0,        // thời điểm bắt đầu bấm thủ công
+            manualInitialPhase: 'ACTIVE',// 'ACTIVE' hoặc 'COOLDOWN'
+            regionOffset: 0,             // độ lệch vòng xoay khu vực (+/-)
+            soundEnabled: false,         // bật/tắt chuông báo
+            hotFilterOnly: false,        // chỉ lọc khu cày ngon
+            remindedCycles: new Set(),   // danh sách cycleIndex người dùng đăng ký nhận thông báo
+            destroyedGenerators: [false, false, false], // 3 trụ trong trận
+            lastPhase: null,             // lưu pha trước đó để phát hiện chuyển giao pha
+            fiveMinWarningTriggered: false
+        };
+
+        // Load saved preferences from localStorage if available
+        try {
+            const savedOffset = localStorage.getItem('mcd2_region_offset');
+            if (savedOffset !== null) state.regionOffset = parseInt(savedOffset, 10) || 0;
+        } catch (e) {}
+
+        /**************************************************************
+         * 3. WEB AUDIO API SYNTHESIZER (NO EXTERNAL MP3 NEEDED)
+         **************************************************************/
+        let audioCtx = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Tạo âm thanh huyền bí kiểu Soul Storm bằng Oscillator
+        function playSoulSound(type = 'START') {
+            try {
+                initAudioContext();
+                const now = audioCtx.currentTime;
+
+                if (type === 'START') {
+                    // Âm thanh triệu hồi Bão Linh Hồn (Hợp âm huyền bí tăng dần)
+                    const freqs = [220, 329.63, 440, 659.25];
+                    freqs.forEach((f, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+                        osc.frequency.setValueAtTime(f, now + idx * 0.12);
+                        osc.frequency.exponentialRampToValueAtTime(f * 1.25, now + idx * 0.12 + 0.7);
+
+                        gain.gain.setValueAtTime(0.001, now + idx * 0.12);
+                        gain.gain.linearRampToValueAtTime(0.15, now + idx * 0.12 + 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.12 + 0.9);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.12);
+                        osc.stop(now + idx * 0.12 + 0.95);
+                    });
+                } else if (type === 'WARNING') {
+                    // Âm báo còn 5 phút cuối
+                    [523.25, 659.25].forEach((f, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(f, now + idx * 0.18);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.18);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.18 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.18);
+                        osc.stop(now + idx * 0.18 + 0.4);
+                    });
+                } else if (type === 'END') {
+                    // Âm thanh kết thúc bão (Trầm xuống)
+                    const freqs = [440, 329.63, 220];
+                    freqs.forEach((f, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(f, now + idx * 0.15);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.15);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.45);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.15);
+                        osc.stop(now + idx * 0.15 + 0.5);
+                    });
+                } else if (type === 'CLICK') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                }
+            } catch (err) {
+                console.warn("Web Audio API error:", err);
+            }
+        }
+
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            const btn = document.getElementById('soundToggleBtn');
+            const icon = document.getElementById('soundIcon');
+            const text = document.getElementById('soundStatusText');
+
+            if (state.soundEnabled) {
+                initAudioContext();
+                playSoulSound('CLICK');
+                btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 bg-cyan-500/20 border-cyan-400/60 text-cyan-200 shadow-lg shadow-cyan-500/10";
+                icon.className = "fa-solid fa-volume-high text-cyan-300";
+                text.textContent = "Âm báo: BẬT";
+                showToast("Đã bật chuông báo Soul Storm!", "Hệ thống sẽ phát âm thanh khi bão bắt đầu, còn 5 phút và khi kết thúc.", "cyan");
+            } else {
+                btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 bg-sculk-900/90 border-slate-700 text-slate-300 hover:border-cyan-400/50";
+                icon.className = "fa-solid fa-volume-xmark text-slate-400";
+                text.textContent = "Âm báo: TẮT";
+                showToast("Đã tắt chuông báo âm thanh", "Bạn có thể bật lại bất kỳ lúc nào ở góc trên màn hình.", "slate");
+            }
+        }
+
+        function testAudioAlert() {
+            playSoulSound('START');
+            showToast("⚡ Đang phát thử chuông báo Soul Storm!", "Âm thanh huyền bí này sẽ vang lên khi cơn bão bắt đầu hoạt động.", "purple");
+        }
+
+        /**************************************************************
+         * 4. TOAST NOTIFICATION SYSTEM (NO ALERT() USED)
+         **************************************************************/
+        function showToast(title, message, color = 'cyan') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            const borderColors = {
+                cyan: 'border-cyan-400/60 bg-sculk-900/95 text-cyan-200',
+                purple: 'border-purple-400/60 bg-sculk-900/95 text-purple-200',
+                amber: 'border-amber-400/60 bg-sculk-900/95 text-amber-200',
+                slate: 'border-slate-600 bg-sculk-900/95 text-slate-200'
+            };
+
+            toast.className = `pointer-events-auto p-4 rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-300 transform translate-x-0 ${borderColors[color] || borderColors.cyan}`;
+            toast.innerHTML = `
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h4 class="font-bold text-xs sm:text-sm">${title}</h4>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">${message}</p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        /**************************************************************
+         * 5. CORE STORM CALCULATION ENGINE
+         **************************************************************/
+        function getStormData(nowMs) {
+            let elapsedSinceEpoch;
+
+            if (state.manualOverride) {
+                // Nếu đang chạy chế độ bấm giờ thủ công
+                const manualElapsed = nowMs - state.manualStartTimeMs;
+                const phaseOffset = state.manualInitialPhase === 'ACTIVE' ? 0 : ACTIVE_DURATION_MS;
+                // Giữ nguyên cycleIndex hiện tại của server nhưng dịch thời gian trong chu kỳ
+                const serverCycleIndex = Math.floor((nowMs - EPOCH_MS) / CYCLE_DURATION_MS);
+                elapsedSinceEpoch = (serverCycleIndex * CYCLE_DURATION_MS) + ((phaseOffset + manualElapsed) % CYCLE_DURATION_MS);
+            } else {
+                elapsedSinceEpoch = nowMs - EPOCH_MS;
+            }
+
+            const cycleIndex = Math.floor(elapsedSinceEpoch / CYCLE_DURATION_MS);
+            const msIntoCycle = ((elapsedSinceEpoch % CYCLE_DURATION_MS) + CYCLE_DURATION_MS) % CYCLE_DURATION_MS;
+
+            const isActive = msIntoCycle < ACTIVE_DURATION_MS;
+            const phase = isActive ? 'ACTIVE' : 'COOLDOWN';
+
+            // Thời gian còn lại của pha hiện tại
+            const phaseRemainingMs = isActive
+                ? (ACTIVE_DURATION_MS - msIntoCycle)
+                : (CYCLE_DURATION_MS - msIntoCycle);
+
+            // Thời gian đến đợt bão mới tiếp theo
+            const nextStormInMs = isActive
+                ? (CYCLE_DURATION_MS - msIntoCycle)
+                : (CYCLE_DURATION_MS - msIntoCycle);
+
+            // Phần trăm thanh tiến trình
+            // Khi Active: rút dần từ 100% về 0%. Khi Cooldown: đầy dần từ 0% lên 100%
+            const progressPercent = isActive
+                ? (phaseRemainingMs / ACTIVE_DURATION_MS) * 100
+                : ((msIntoCycle - ACTIVE_DURATION_MS) / COOLDOWN_DURATION_MS) * 100;
+
+            // Tính khu vực (0 -> 6) kèm độ lệch thủ công
+            const rawRegionIndex = ((cycleIndex + state.regionOffset) % 7 + 7) % 7;
+            const nextRegionIndex = ((rawRegionIndex + 1) % 7 + 7) % 7;
+
+            return {
+                cycleIndex,
+                msIntoCycle,
+                isActive,
+                phase,
+                phaseRemainingMs,
+                nextStormInMs,
+                progressPercent,
+                currentRegion: REGIONS[rawRegionIndex],
+                nextRegion: REGIONS[nextRegionIndex],
+                rawRegionIndex
+            };
+        }
+
+        // Format ms sang MM:SS
+        function formatMMSS(ms) {
+            const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Format giờ địa phương HH:MM
+        function formatTimeHHMM(dateObj) {
+            return dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        /**************************************************************
+         * 6. UI RENDER & UPDATE LOOP
+         **************************************************************/
+        function updateDashboard() {
+            const nowMs = Date.now();
+            const nowDate = new Date(nowMs);
+
+            // Cập nhật đồng hồ hệ thống ở Header
+            document.getElementById('localClockDisplay').textContent = nowDate.toLocaleTimeString('vi-VN', { hour12: false });
+
+            const data = getStormData(nowMs);
+
+            // Kiểm tra chuyển giao pha để phát âm báo
+            if (state.lastPhase !== null && state.lastPhase !== data.phase) {
+                state.fiveMinWarningTriggered = false;
+                if (data.phase === 'ACTIVE') {
+                    if (state.soundEnabled) playSoulSound('START');
+                    showToast(
+                        `⚡ SOUL STORM BẮT ĐẦU TẠI ${data.currentRegion.name.toUpperCase()}!`,
+                        `Bạn có 20 phút để phá hủy 3 Storm Generators. Trạm tàu: ${data.currentRegion.stations}.`,
+                        'cyan'
+                    );
+                } else {
+                    if (state.soundEnabled) playSoulSound('END');
+                    showToast(
+                        `⏳ Cơn bão tại ${data.currentRegion.name} đã kết thúc`,
+                        `Bước vào 20 phút tạm nghỉ. Khu vực tiếp theo: ${data.nextRegion.name}.`,
+                        'amber'
+                    );
+                }
+                renderScheduleList();
+                renderAllRegionsOverview(data.rawRegionIndex, data.isActive);
+            }
+
+            // Cảnh báo khi bão đang hoạt động và còn đúng 5 phút (300 giây)
+            if (data.isActive && data.phaseRemainingMs <= 5 * 60 * 1000 && data.phaseRemainingMs > 4.9 * 60 * 1000 && !state.fiveMinWarningTriggered) {
+                state.fiveMinWarningTriggered = true;
+                if (state.soundEnabled) playSoulSound('WARNING');
+                showToast("⚠️ Còn 5 phút trước khi Soul Storm kết thúc!", "Hãy nhanh chóng kích hoạt và mở Rương Bão (Storm Chest)!", "amber");
+            }
+
+            state.lastPhase = data.phase;
+
+            // --- Cập nhật Hero Timer Card ---
+            const heroCard = document.getElementById('heroTimerCard');
+            const heroBgDecor = document.getElementById('heroBgDecor');
+            const statusBadge = document.getElementById('statusBadge');
+            const statusBadgeText = document.getElementById('statusBadgeText');
+            const timerSubLabel = document.getElementById('timerSubLabel');
+            const mainCountdown = document.getElementById('mainCountdown');
+            const cycleMinuteTag = document.getElementById('cycleMinuteTag');
+            const secondaryTimerLabel = document.getElementById('secondaryTimerLabel');
+            const secondaryCountdown = document.getElementById('secondaryCountdown');
+            const nextPhaseTimeClock = document.getElementById('nextPhaseTimeClock');
+            const progressLeftLabel = document.getElementById('progressLeftLabel');
+            const progressPercentText = document.getElementById('progressPercentText');
+            const mainProgressBar = document.getElementById('mainProgressBar');
+
+            const currentMinuteInCycle = Math.floor(data.msIntoCycle / 60000);
+            cycleMinuteTag.textContent = `Phút ${String(currentMinuteInCycle).padStart(2, '0')}/40`;
+
+            const transitionTime = new Date(nowMs + data.phaseRemainingMs);
+
+            if (data.isActive) {
+                // TRẠNG THÁI: BÃO ĐANG HOẠT ĐỘNG (0 - 20m)
+                heroCard.className = "lg:col-span-8 rounded-2xl bg-sculk-900/85 backdrop-blur-xl border-2 p-6 sm:p-8 flex flex-col justify-between transition-all duration-500 soul-glow-active relative overflow-hidden";
+                heroBgDecor.className = "w-72 h-72 rounded-full bg-cyan-500/15 blur-3xl absolute -top-20 -right-20 pointer-events-none";
+
+                statusBadge.className = "inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold tracking-wide uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-lg shadow-cyan-500/10";
+                statusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span><span>⚡ SOUL STORM ĐANG HOẠT ĐỘNG (ACTIVE)</span>`;
+
+                timerSubLabel.textContent = `THỜI GIAN CƠN BÃO ĐANG HOẠT ĐỘNG CÒN LẠI:`;
+                mainCountdown.textContent = formatMMSS(data.phaseRemainingMs);
+                mainCountdown.className = "font-mono text-6xl sm:text-7xl md:text-8xl font-extrabold tracking-tight text-cyan-300 text-glow-cyan select-none";
+
+                secondaryTimerLabel.textContent = "Đợt bão kế tiếp sau:";
+                secondaryCountdown.textContent = formatMMSS(data.nextStormInMs);
+                nextPhaseTimeClock.textContent = `Bão tắt lúc: ${formatTimeHHMM(transitionTime)}`;
+
+                progressLeftLabel.className = "text-cyan-300 flex items-center gap-1.5";
+                progressLeftLabel.innerHTML = `<i class="fa-solid fa-bolt"></i> Năng lượng cơn bão hiện tại (20p Active)`;
+                progressPercentText.textContent = `${data.progressPercent.toFixed(1)}% còn lại`;
+                mainProgressBar.className = "h-full rounded-full bg-gradient-to-r from-cyan-400 via-teal-400 to-purple-500 transition-all duration-300";
+                mainProgressBar.style.width = `${data.progressPercent}%`;
+
+                // Region Header Tag
+                document.getElementById('regionCardHeaderTag').className = "text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5";
+                document.getElementById('regionCardHeaderTag').innerHTML = `<i class="fa-solid fa-location-crosshairs animate-spin"></i> KHU VỰC ĐANG CÓ BÃO`;
+
+            } else {
+                // TRẠNG THÁI: ĐANG CHỜ CƠN BÃO TIẾP THEO (20m - 40m)
+                heroCard.className = "lg:col-span-8 rounded-2xl bg-sculk-900/85 backdrop-blur-xl border-2 p-6 sm:p-8 flex flex-col justify-between transition-all duration-500 soul-glow-cooldown relative overflow-hidden";
+                heroBgDecor.className = "w-72 h-72 rounded-full bg-amber-500/10 blur-3xl absolute -top-20 -right-20 pointer-events-none";
+
+                statusBadge.className = "inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-400/50 shadow-lg shadow-amber-500/10";
+                statusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span><span>⏳ ĐANG CHỜ CƠN BÃO TIẾP THEO (COOLDOWN)</span>`;
+
+                timerSubLabel.textContent = `ĐẾM NGƯỢC ĐẾN ĐỢT BÃO TIẾP THEO:`;
+                mainCountdown.textContent = formatMMSS(data.phaseRemainingMs);
+                mainCountdown.className = "font-mono text-6xl sm:text-7xl md:text-8xl font-extrabold tracking-tight text-amber-300 text-glow-amber select-none";
+
+                secondaryTimerLabel.textContent = "Khi bão nổ sẽ kéo dài:";
+                secondaryCountdown.textContent = "20:00";
+                nextPhaseTimeClock.textContent = `Bão bắt đầu lúc: ${formatTimeHHMM(transitionTime)}`;
+
+                progressLeftLabel.className = "text-amber-300 flex items-center gap-1.5";
+                progressLeftLabel.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Đang tích tụ năng lượng bão (20p Chờ)`;
+                progressPercentText.textContent = `Đã nạp ${data.progressPercent.toFixed(1)}%`;
+                mainProgressBar.className = "h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-400 to-purple-500 transition-all duration-300";
+                mainProgressBar.style.width = `${data.progressPercent}%`;
+
+                // Region Header Tag
+                document.getElementById('regionCardHeaderTag').className = "text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5";
+                document.getElementById('regionCardHeaderTag').innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> KHU VỰC SẮP XUẤT HIỆN BÃO`;
+            }
+
+            // --- Cập nhật thông tin Khu vực bên phải ---
+            // Khi đang Active -> Hiển thị khu vực hiện tại. Khi đang Cooldown -> Hiển thị khu vực SẮP NỔ BÃO tiếp theo để người chơi chuẩn bị!
+            const displayRegion = data.isActive ? data.currentRegion : data.nextRegion;
+            const upcomingAfterDisplay = data.isActive ? data.nextRegion : REGIONS[(data.nextRegion.id + 1) % 7];
+
+            document.getElementById('regionRotationIndexBadge').textContent = `Vòng xoay #${displayRegion.id + 1}/7`;
+            document.getElementById('currentRegionName').textContent = displayRegion.name;
+            document.getElementById('currentRegionVietSub').textContent = displayRegion.vietName;
+            document.getElementById('currentRegionGenerators').textContent = `${displayRegion.generators} spawn`;
+            document.getElementById('currentRegionStations').textContent = displayRegion.stations;
+
+            const hotBadge = document.getElementById('hotFarmBadge');
+            if (displayRegion.isHot) {
+                hotBadge.classList.remove('hidden');
+            } else {
+                hotBadge.classList.add('hidden');
+            }
+
+            document.getElementById('nextRegionNamePreview').textContent = upcomingAfterDisplay.name;
+            document.getElementById('nextRegionGenPreview').textContent = upcomingAfterDisplay.generators;
+        }
+
+        /**************************************************************
+         * 7. MANUAL SYNC & OFFSET CONTROLS
+         **************************************************************/
+        function startManualPhase(phaseType) {
+            state.manualOverride = true;
+            state.manualStartTimeMs = Date.now();
+            state.manualInitialPhase = phaseType;
+            state.lastPhase = phaseType;
+
+            document.getElementById('resetServerSyncBtn').classList.remove('hidden');
+            const syncBadge = document.getElementById('syncModeBadge');
+            syncBadge.className = "text-xs font-mono px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 text-amber-300 flex items-center gap-1.5";
+            syncBadge.innerHTML = `<i class="fa-solid fa-hand-pointer text-amber-400 text-[10px]"></i><span>Bấm giờ thủ công</span>`;
+
+            if (state.soundEnabled) playSoulSound('CLICK');
+
+            updateDashboard();
+            renderScheduleList();
+
+            const msg = phaseType === 'ACTIVE'
+                ? "Đã bắt đầu đếm ngược 20 phút Bão Đang Hoạt Động!"
+                : "Đã bắt đầu đếm ngược 20 phút Chờ Đợt Bão Tiếp Theo!";
+            showToast("⏱️ Đã kích hoạt Bấm giờ thủ công", msg, phaseType === 'ACTIVE' ? 'cyan' : 'amber');
+        }
+
+        function resetToServerTime() {
+            state.manualOverride = false;
+            document.getElementById('resetServerSyncBtn').classList.add('hidden');
+            const syncBadge = document.getElementById('syncModeBadge');
+            syncBadge.className = "text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-slate-300 flex items-center gap-1.5";
+            syncBadge.innerHTML = `<i class="fa-solid fa-satellite-dish text-cyan-400 text-[10px]"></i><span>Giờ chuẩn Server (UTC)</span>`;
+
+            if (state.soundEnabled) playSoulSound('CLICK');
+            updateDashboard();
+            renderScheduleList();
+            showToast("🔄 Đã đồng bộ lại giờ chuẩn Server", "Đồng hồ hiện chạy theo chu kỳ gốc UTC 2026-01-01.", "purple");
+        }
+
+        function adjustRegionOffset(delta) {
+            state.regionOffset = (state.regionOffset + delta) % 7;
+            try {
+                localStorage.setItem('mcd2_region_offset', state.regionOffset);
+            } catch (e) {}
+
+            const sign = state.regionOffset > 0 ? `+${state.regionOffset}` : `${state.regionOffset}`;
+            document.getElementById('regionOffsetDisplay').textContent = sign;
+
+            if (state.soundEnabled) playSoulSound('CLICK');
+            const nowData = getStormData(Date.now());
+            updateDashboard();
+            renderScheduleList();
+            renderAllRegionsOverview(nowData.rawRegionIndex, nowData.isActive);
+        }
+
+        /**************************************************************
+         * 8. IN-RUN GENERATOR TRACKER (3 PILLARS)
+         **************************************************************/
+        function toggleGenerator(index) {
+            const idx = index - 1;
+            state.destroyedGenerators[idx] = !state.destroyedGenerators[idx];
+            if (state.soundEnabled) playSoulSound('CLICK');
+            renderGeneratorsUI();
+        }
+
+        function resetGenerators() {
+            state.destroyedGenerators = [false, false, false];
+            if (state.soundEnabled) playSoulSound('CLICK');
+            renderGeneratorsUI();
+        }
+
+        function renderGeneratorsUI() {
+            let count = 0;
+            state.destroyedGenerators.forEach((isDestroyed, idx) => {
+                if (isDestroyed) count++;
+                const btn = document.getElementById(`genBtn${idx + 1}`);
+                const icon = document.getElementById(`genIcon${idx + 1}`);
+
+                if (isDestroyed) {
+                    btn.className = "group p-3.5 rounded-xl border-2 border-cyan-400 bg-cyan-950/40 shadow-lg shadow-cyan-500/15 transition-all flex flex-col items-center text-center relative overflow-hidden";
+                    icon.className = "w-10 h-10 rounded-full bg-cyan-400 text-sculk-950 flex items-center justify-center transition mb-2 shadow-md shadow-cyan-400/50";
+                    icon.innerHTML = `<i class="fa-solid fa-check text-lg font-bold"></i>`;
+                } else {
+                    btn.className = "group p-3.5 rounded-xl border border-slate-700/80 bg-sculk-950/90 hover:border-cyan-400/60 transition-all flex flex-col items-center text-center relative overflow-hidden";
+                    icon.className = "w-10 h-10 rounded-full bg-slate-800/90 flex items-center justify-center text-slate-400 group-hover:text-cyan-300 transition mb-2";
+                    icon.innerHTML = `<i class="fa-solid fa-tower-observation text-lg"></i>`;
+                }
+            });
+
+            document.getElementById('genCountBadge').textContent = `${count} / 3 Đã phá`;
+
+            const rewardBox = document.getElementById('rewardTierBox');
+            const rewardTitle = document.getElementById('rewardChestTitle');
+            const rewardDesc = document.getElementById('rewardChestDesc');
+
+            if (count === 0) {
+                rewardBox.className = "mt-4 p-4 rounded-xl bg-sculk-950 border border-slate-800 transition-all";
+                rewardTitle.className = "text-xs font-bold font-mono text-slate-400";
+                rewardTitle.textContent = "Chưa kích hoạt rương";
+                rewardDesc.textContent = "Hãy phá hủy ít nhất 1 Storm Generator trong khu vực bão trước khi đồng hồ 20 phút kết thúc để triệu hồi Rương Bão.";
+            } else if (count === 1) {
+                rewardBox.className = "mt-4 p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/40 transition-all";
+                rewardTitle.className = "text-xs font-bold font-mono text-cyan-300";
+                rewardTitle.textContent = "Rương Bão Cấp 1 (800 HP)";
+                rewardDesc.textContent = "Đã đủ điều kiện mở Rương Cấp 1! Hãy tìm thêm 2 Storm Generators nữa để tối ưu hóa số lượng vật phẩm rơi ra.";
+            } else if (count === 2) {
+                rewardBox.className = "mt-4 p-4 rounded-xl bg-purple-950/40 border border-purple-500/50 transition-all";
+                rewardTitle.className = "text-xs font-bold font-mono text-purple-300";
+                rewardTitle.textContent = "Rương Bão Cấp 2 (1,000 HP)";
+                rewardDesc.textContent = "Rất tốt! Chỉ còn 1 Storm Generator cuối cùng để đạt Rương Cấp 3 tối đa.";
+            } else {
+                rewardBox.className = "mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan-950/60 via-purple-950/60 to-sculk-950 border-2 border-cyan-400/70 transition-all";
+                rewardTitle.className = "text-xs font-bold font-mono text-amber-300";
+                rewardTitle.textContent = "🏆 RƯƠNG BÃO CẤP 3 TỐI ĐA (1,200 HP)";
+                rewardDesc.textContent = "Hoàn hảo (3/3)! Tiến tới vị trí Storm Chest ngay và phá vỡ 1,200 HP của rương để nhận cơ hội 19.8% Unique (tối đa 3 modifiers).";
+            }
+        }
+
+        /**************************************************************
+         * 9. UPCOMING SCHEDULE TIMELINE & ALL 7 REGIONS VIEW
+         **************************************************************/
+        function toggleHotFilter() {
+            state.hotFilterOnly = !state.hotFilterOnly;
+            const btn = document.getElementById('filterHotBtn');
+            if (state.hotFilterOnly) {
+                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 border border-amber-400/60 text-amber-300 transition flex items-center gap-1.5";
+            } else {
+                btn.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-sculk-950 border border-slate-700 text-slate-300 hover:border-amber-400/50 transition flex items-center gap-1.5";
+            }
+            renderScheduleList();
+        }
+
+        function toggleCycleReminder(cycleIdx, regionName) {
+            if (state.remindedCycles.has(cycleIdx)) {
+                state.remindedCycles.delete(cycleIdx);
+                showToast("Đã tắt hẹn giờ", `Đã hủy nhắc nhở đợt bão tại ${regionName}.`, "slate");
+            } else {
+                state.remindedCycles.add(cycleIdx);
+                if (!state.soundEnabled) {
+                    toggleSound(); // Tự động bật âm thanh nếu người dùng bấm hẹn giờ
+                } else {
+                    playSoulSound('CLICK');
+                }
+                showToast("🔔 Đã đặt chuông nhắc!", `Hệ thống sẽ báo hiệu khi đợt bão tại ${regionName} bắt đầu.`, "cyan");
+            }
+            renderScheduleList();
+        }
+
+        function renderScheduleList() {
+            const container = document.getElementById('scheduleListContainer');
+            const nowMs = Date.now();
+            const currentData = getStormData(nowMs);
+
+            const baseCycleStartMs = nowMs - currentData.msIntoCycle;
+            let html = '';
+
+            const maxCyclesToLookAhead = state.hotFilterOnly ? 21 : 9;
+            let renderedCount = 0;
+
+            for (let i = 0; i < maxCyclesToLookAhead; i++) {
+                if (renderedCount >= 8) break;
+
+                const targetCycleIndex = currentData.cycleIndex + i;
+                const cycleStartMs = baseCycleStartMs + (i * CYCLE_DURATION_MS);
+                const activeEndMs = cycleStartMs + ACTIVE_DURATION_MS;
+
+                const regIdx = ((targetCycleIndex + state.regionOffset) % 7 + 7) % 7;
+                const region = REGIONS[regIdx];
+
+                if (state.hotFilterOnly && !region.isHot) continue;
+
+                const isCurrentCycle = (i === 0);
+                const isCurrentlyActive = isCurrentCycle && currentData.isActive;
+                const isCurrentlyCooldown = isCurrentCycle && !currentData.isActive;
+
+                // Nếu chu kỳ hiện tại đã qua 20 phút Active (đang Cooldown), thì đợt bão của chu kỳ i=0 đã kết thúc
+                if (isCurrentlyCooldown) continue;
+
+                renderedCount++;
+
+                const startStr = formatTimeHHMM(new Date(cycleStartMs));
+                const endStr = formatTimeHHMM(new Date(activeEndMs));
+                const isReminded = state.remindedCycles.has(targetCycleIndex);
+
+                const minutesUntilStart = Math.max(0, Math.round((cycleStartMs - nowMs) / 60000));
+
+                html += `
+                    <div class="p-3.5 rounded-xl border transition-all flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 ${
+                        isCurrentlyActive 
+                            ? 'bg-cyan-950/30 border-cyan-400/60 shadow-md shadow-cyan-500/10' 
+                            : region.isHot 
+                                ? 'bg-sculk-950/90 border-amber-500/35 hover:border-amber-400/60' 
+                                : 'bg-sculk-950/75 border-slate-800/90 hover:border-slate-700'
+                    }">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Time Column -->
+                            <div class="text-center px-3 py-1.5 rounded-lg bg-sculk-900 border border-slate-800 min-w-[110px]">
+                                <div class="font-mono font-bold text-xs sm:text-sm ${isCurrentlyActive ? 'text-cyan-300' : 'text-slate-200'}">
+                                    ${startStr} - ${endStr}
+                                </div>
+                                <div class="text-[10px] font-mono ${isCurrentlyActive ? 'text-cyan-400 font-bold' : 'text-slate-400'}">
+                                    ${isCurrentlyActive ? '⚡ ĐANG DIỄN RA' : `Sau ~${minutesUntilStart} phút`}
+                                </div>
+                            </div>
+
+                            <!-- Region Name & Info -->
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="font-bold text-sm text-white">${region.name}</span>
+                                    ${region.isHot ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold">🔥 HOT FARM</span>` : ''}
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <span><i class="fa-solid fa-tower-observation text-cyan-400/80 mr-1"></i>${region.generators}</span>
+                                    <span class="hidden sm:inline text-slate-600">•</span>
+                                    <span class="text-slate-300"><i class="fa-solid fa-train-subway text-purple-400/80 mr-1"></i>${region.stations}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reminder Button -->
+                        <div class="flex items-center gap-2 ml-auto sm:ml-0">
+                            ${isCurrentlyActive ? `
+                                <span class="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-mono font-semibold">
+                                    Active
+                                </span>
+                            ` : `
+                                <button onclick="toggleCycleReminder(${targetCycleIndex}, '${region.name.replace(/'/g, "\\'")}')" 
+                                    class="px-3 py-1.5 rounded-lg border text-xs font-medium transition flex items-center gap-1.5 ${
+                                        isReminded 
+                                            ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' 
+                                            : 'bg-sculk-900 border-slate-700 text-slate-300 hover:border-cyan-400/50'
+                                    }">
+                                    <i class="fa-solid ${isReminded ? 'fa-bell text-cyan-300 animate-bounce' : 'fa-bell-slash text-slate-400'}"></i>
+                                    <span>${isReminded ? 'Đã hẹn' : 'Nhắc tôi'}</span>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderAllRegionsOverview(activeIndex, isStormCurrentlyActive) {
+            const grid = document.getElementById('allRegionsGrid');
+            const targetIndex = isStormCurrentlyActive ? activeIndex : (activeIndex + 1) % 7;
+
+            grid.innerHTML = REGIONS.map((reg, idx) => {
+                const isHighlighted = idx === targetIndex;
+                return `
+                    <div class="p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+                        isHighlighted
+                            ? isStormCurrentlyActive
+                                ? 'bg-cyan-950/35 border-cyan-400 shadow-lg shadow-cyan-500/15'
+                                : 'bg-amber-950/30 border-amber-400/80 shadow-lg shadow-amber-500/10'
+                            : 'bg-sculk-950/70 border-slate-800/80 opacity-80 hover:opacity-100'
+                    }">
+                        <div>
+                            <div class="flex items-center justify-between text-[11px] font-mono mb-1.5">
+                                <span class="${isHighlighted ? 'text-cyan-300 font-bold' : 'text-slate-400'}">#${idx + 1}</span>
+                                ${reg.isHot ? `<span class="text-amber-400 font-bold" title="Khu cày tốt nhất">🔥 HOT</span>` : `<i class="fa-solid ${reg.icon} text-slate-500"></i>`}
+                            </div>
+                            <h4 class="font-bold text-xs sm:text-sm text-white leading-snug">${reg.name}</h4>
+                            <p class="text-[11px] text-slate-400 mt-0.5">${reg.vietName}</p>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                            <span class="text-slate-400">Trụ:</span>
+                            <span class="font-mono font-semibold text-cyan-300">${reg.generators}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**************************************************************
+         * 10. AMBIENT SOUL PARTICLES CANVAS
+         **************************************************************/
+        function initParticles() {
+            const canvas = document.getElementById('soulParticles');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            const particles = [];
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            for (let i = 0; i < 32; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.2 + 0.8,
+                    speedY: -(Math.random() * 0.45 + 0.15),
+                    speedX: (Math.random() - 0.5) * 0.3,
+                    alpha: Math.random() * 0.55 + 0.15,
+                    color: Math.random() > 0.35 ? '#00f2fe' : '#a855f7'
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                particles.forEach(p => {
+                    p.y += p.speedY;
+                    p.x += p.speedX;
+
+                    if (p.y < -10) {
+                        p.y = height + 10;
+                        p.x = Math.random() * width;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fill();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        /**************************************************************
+         * 11. INITIALIZATION ON WINDOW LOAD
+         **************************************************************/
+        window.onload = function () {
+            const sign = state.regionOffset > 0 ? `+${state.regionOffset}` : `${state.regionOffset}`;
+            document.getElementById('regionOffsetDisplay').textContent = sign;
+
+            initParticles();
+            renderGeneratorsUI();
+
+            const initialData = getStormData(Date.now());
+            state.lastPhase = initialData.phase;
+
+            updateDashboard();
+            renderScheduleList();
+            renderAllRegionsOverview(initialData.rawRegionIndex, initialData.isActive);
+
+            // Cập nhật mỗi 250ms để đồng hồ mượt và chính xác tuyệt đối
+            setInterval(updateDashboard, 250);
+            // Cập nhật lại bảng lịch trình mỗi 30 giây
+            setInterval(renderScheduleList, 30000);
+        };
+    </script>
+</body>
+</html>
